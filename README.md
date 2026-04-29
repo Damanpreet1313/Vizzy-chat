@@ -1,67 +1,94 @@
+<div align="center">
+
+<img src="public/bot-avatar.png" alt="Vizzy Chat Logo" width="80" />
+
 # Vizzy Chat
 
-A full-stack AI chat application built with Next.js 16, featuring real-time streaming, voice input, image generation, and image editing — all in a polished dark/light UI.
+**A full-stack AI chat application with image generation, voice input, and persistent conversations.**
 
-![Vizzy Chat](public/bot-avatar.png)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org)
+[![Clerk](https://img.shields.io/badge/Auth-Clerk-purple?logo=clerk)](https://clerk.com)
+[![Prisma](https://img.shields.io/badge/ORM-Prisma-2D3748?logo=prisma)](https://www.prisma.io)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+[Features](#features) · [Tech Stack](#tech-stack) · [Getting Started](#getting-started) · [Environment Variables](#environment-variables) · [Deployment](#deployment)
+
+</div>
+
+---
 
 ## Features
 
-- **Streaming chat** — real-time responses via OpenRouter (supports GPT-4o, Claude, Gemini, etc.)
-- **Voice input** — record audio and transcribe with Groq Whisper
-- **Image generation** — generate images from text prompts via HuggingFace FLUX or Pollinations.ai fallback
-- **Image operations** — upscale, rotate/flip, apply filters, and compare before/after directly in chat
-- **Image upload** — drag & drop or camera capture with optional 2× upscale + watermark
-- **Conversation history** — persisted to PostgreSQL via Prisma
-- **Auth** — Clerk authentication (sign in / sign up)
-- **Rate limiting** — per-user sliding window via Upstash Redis
-- **Dark & light theme** — full theme switching with next-themes
+- 🤖 **AI Chat** — Streaming responses via [OpenRouter](https://openrouter.ai) (auto-selects best model), with a free [Pollinations.ai](https://pollinations.ai) fallback when no API key is set
+- 🎨 **Image Generation** — Type `/generate <prompt>` to create images using FLUX.1-schnell on HuggingFace, with automatic Pollinations.ai fallback
+- 🎙️ **Voice Input** — Record audio messages transcribed to text using Groq Whisper (`whisper-large-v3`)
+- 💬 **Persistent Conversations** — Full conversation history stored in PostgreSQL, accessible from the sidebar
+- 🌗 **Dark / Light Mode** — System-aware theme toggle
+- ☁️ **Cloud Storage** — Generated images stored on Cloudflare R2, with local filesystem fallback for development
+- 🔐 **Auth** — Sign-up, sign-in, and webhook sync powered by Clerk
+- 🛡️ **Rate Limiting** — Per-user sliding window rate limiting on all AI endpoints via Upstash
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
 | Framework | Next.js 16 (App Router) |
+| Language | TypeScript 5 |
 | Auth | Clerk |
 | Database | PostgreSQL + Prisma |
-| AI Chat | OpenRouter API |
-| Image Gen | HuggingFace Inference API / Pollinations.ai |
-| STT | Groq Whisper |
-| Storage | Cloudflare R2 (or local fallback) |
-| Rate Limiting | Upstash Redis + @upstash/ratelimit |
-| UI | Tailwind CSS v4 + shadcn/ui (base-ui) |
+| AI / LLM | OpenRouter → Pollinations.ai (fallback) |
+| Image Gen | HuggingFace FLUX.1-schnell → Pollinations.ai (fallback) |
+| Voice STT | Groq Whisper |
+| Storage | Cloudflare R2 → Local (fallback) |
 | State | Zustand + TanStack Query |
-| Animations | Framer Motion |
+| UI | Tailwind CSS v4 + shadcn/ui + Framer Motion |
+| Queue | BullMQ + Upstash Redis |
+
+---
 
 ## Getting Started
 
-### 1. Clone and install
+### Prerequisites
+
+- Node.js 18+
+- A PostgreSQL database (local or hosted e.g. [Neon](https://neon.tech))
+- A [Clerk](https://clerk.com) account (free tier works)
+
+> **Zero-config mode:** Vizzy Chat runs without any paid API keys. LLM chat and image generation both fall back to free Pollinations.ai endpoints automatically. You only need Clerk + a database to get started.
+
+### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/vizzy-chat.git
-cd vizzy-chat
+git clone https://github.com/Damanpreet1313/Vizzy-chat.git
+cd Vizzy-chat
 npm install
 ```
 
-### 2. Set up environment variables
-
-Copy `.env.example` to `.env.local` and fill in the values:
+### 2. Set Up Environment Variables
 
 ```bash
 cp .env.example .env.local
 ```
 
-See [Environment Variables](#environment-variables) below for details on each key.
+Fill in the values — see [Environment Variables](#environment-variables) below.
 
-### 3. Set up the database
+### 3. Set Up the Database
 
 ```bash
-npm run db:push
+npx prisma db push
 ```
 
-### 4. Run the development server
+### 4. Run the Development Server
 
 ```bash
+# Chat + UI only
 npm run dev
+
+# Chat + image worker (for BullMQ queue)
+npm run dev:all
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -70,128 +97,105 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Environment Variables
 
-Create a `.env.local` file in the project root with the following:
+Create a `.env.local` file in the project root. Only the variables marked **Required** are needed to run the app — everything else unlocks additional features.
 
 ```env
-# ── Database ──────────────────────────────────────────────────
-# PostgreSQL connection string (e.g. from Neon, Supabase, or local)
-DATABASE_URL="postgresql://user:password@host:5432/vizzy"
+# ── Database (Required) ────────────────────────────────────────────
+DATABASE_URL=postgresql://user:password@localhost:5432/vizzy
 
-# ── Clerk Auth ────────────────────────────────────────────────
-# Get these from https://dashboard.clerk.com
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
-CLERK_SECRET_KEY="sk_test_..."
-CLERK_WEBHOOK_SECRET="whsec_..."          # From Clerk → Webhooks
+# ── Clerk Auth (Required) ──────────────────────────────────────────
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+CLERK_WEBHOOK_SECRET=whsec_...          # For syncing users via Clerk webhooks
 
-# Clerk redirect URLs (leave as-is for local dev)
-NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
-NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/"
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
-# ── OpenRouter (AI Chat) ──────────────────────────────────────
-# Get your key from https://openrouter.ai/keys
-OPENROUTER_API_KEY="sk-or-..."
+# ── App URL ────────────────────────────────────────────────────────
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# ── Groq (Speech-to-Text) ─────────────────────────────────────
-# Get your key from https://console.groq.com
-GROQ_API_KEY="gsk_..."
+# ── LLM — OpenRouter (Optional, falls back to Pollinations.ai) ─────
+OPENROUTER_API_KEY=sk-or-...
 
-# ── HuggingFace (Image Generation) ───────────────────────────
-# Get your token from https://huggingface.co/settings/tokens
-# Optional — falls back to Pollinations.ai (free, no key needed)
-HUGGINGFACE_API_TOKEN="hf_..."
+# ── Image Generation — HuggingFace (Optional, falls back to Pollinations.ai)
+HUGGINGFACE_API_TOKEN=hf_...
 
-# ── Cloudflare R2 (File Storage) ─────────────────────────────
-# Create a bucket at https://dash.cloudflare.com → R2
-# Leave blank to use local public/uploads fallback
-R2_ACCOUNT_ID=""
-R2_ACCESS_KEY_ID=""
-R2_SECRET_ACCESS_KEY=""
-R2_BUCKET_NAME=""
-R2_PUBLIC_URL=""                          # e.g. https://pub-xxx.r2.dev
+# ── Voice STT — Groq (Optional) ───────────────────────────────────
+GROQ_API_KEY=gsk_...
 
-# ── Upstash Redis (Rate Limiting) ─────────────────────────────
-# Create a database at https://console.upstash.com
-UPSTASH_REDIS_REST_URL="https://xxx.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="AXxx..."
+# ── Cloud Storage — Cloudflare R2 (Optional, falls back to local) ──
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=vizzy-chat
+R2_PUBLIC_URL=https://pub-<hash>.r2.dev
 
-# Used by BullMQ worker (ioredis format)
-UPSTASH_REDIS_URL="rediss://default:xxx@xxx.upstash.io:6379"
+# ── Rate Limiting — Upstash Redis (Optional) ──────────────────────
+UPSTASH_REDIS_URL=rediss://...
+UPSTASH_REDIS_TOKEN=...
 ```
 
-### Which keys are required?
+### Clerk Webhook Setup
 
-| Key | Required | Notes |
-|---|---|---|
-| `DATABASE_URL` | ✅ Yes | Any PostgreSQL provider works |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | ✅ Yes | |
-| `CLERK_SECRET_KEY` | ✅ Yes | |
-| `CLERK_WEBHOOK_SECRET` | ✅ Yes | Set up webhook in Clerk dashboard |
-| `OPENROUTER_API_KEY` | ✅ Yes | Powers the chat |
-| `GROQ_API_KEY` | ⚠️ Optional | Voice input won't work without it |
-| `HUGGINGFACE_API_TOKEN` | ⚠️ Optional | Falls back to Pollinations.ai |
-| `R2_*` variables | ⚠️ Optional | Falls back to local `public/uploads` |
-| `UPSTASH_REDIS_REST_URL/TOKEN` | ✅ Yes | Required for rate limiting |
-| `UPSTASH_REDIS_URL` | ⚠️ Optional | Only needed for the BullMQ worker |
+1. In your Clerk dashboard, go to **Webhooks → Add Endpoint**
+2. Set the URL to `https://your-domain.com/api/webhooks/clerk`
+3. Subscribe to the `user.created` and `user.updated` events
+4. Copy the signing secret into `CLERK_WEBHOOK_SECRET`
 
 ---
-
-## Scripts
-
-```bash
-npm run dev          # Start Next.js dev server
-npm run build        # Production build
-npm run start        # Start production server
-npm run lint         # ESLint
-npm run db:push      # Push Prisma schema to database
-npm run worker       # Start BullMQ image worker (separate process)
-npm run dev:all      # Run dev server + worker concurrently
-```
 
 ## Project Structure
 
 ```
 src/
 ├── app/
-│   ├── (auth)/          # Sign-in / sign-up pages
+│   ├── (auth)/            # Sign-in / Sign-up pages (Clerk)
 │   ├── api/
-│   │   ├── chat/        # Streaming chat endpoint
-│   │   ├── conversations/
-│   │   ├── images/      # Generate + status endpoints
-│   │   ├── stt/         # Speech-to-text
-│   │   ├── upload/      # Image upload
-│   │   └── webhooks/    # Clerk webhook handler
-│   ├── globals.css
-│   ├── layout.tsx
-│   └── page.tsx
+│   │   ├── chat/          # Streaming LLM chat endpoint (rate limited + validated)
+│   │   ├── conversations/ # CRUD for conversation history
+│   │   ├── images/        # Image generation + job status polling
+│   │   ├── stt/           # Voice → text (Groq Whisper)
+│   │   └── webhooks/      # Clerk user sync
+│   └── page.tsx           # Main app shell
 ├── components/
-│   ├── chat/            # ChatInterface, MessageBubble, TypingIndicator
-│   ├── images/          # DropzoneUpload, ImageOperationsModal, ImageCompare
-│   ├── sidebar/         # Sidebar with mobile Sheet drawer
-│   ├── ui/              # shadcn/ui components
-│   └── voice/           # VoiceRecorder
-├── hooks/               # useImageGeneration
+│   ├── chat/              # ChatInterface, MessageBubble, TypingIndicator
+│   ├── sidebar/           # Conversation history sidebar
+│   ├── voice/             # Voice recorder
+│   └── ui/                # shadcn/ui primitives
+├── hooks/                 # useImageGeneration
 ├── lib/
-│   ├── clients/         # gemini, groq, huggingface, openrouter, r2
-│   ├── db.ts            # Prisma client
-│   ├── queue.ts         # BullMQ queue
-│   └── validators.ts    # Zod schemas
-├── store/               # Zustand stores
-└── worker/              # BullMQ image worker
+│   ├── clients/           # openrouter, huggingface, groq, r2
+│   ├── db.ts              # Prisma client singleton
+│   ├── queue.ts           # BullMQ + Redis queue
+│   └── validators.ts      # Zod schemas
+├── store/                 # Zustand stores (chat, user)
+└── worker/                # Image generation background worker
+prisma/
+└── schema.prisma          # User, Conversation, Message, ImageJob models
 ```
 
-## Deployment
+---
 
-The easiest way to deploy is [Vercel](https://vercel.com):
+## Usage
 
-1. Push to GitHub
-2. Import the repo in Vercel
-3. Add all environment variables in the Vercel dashboard
-4. Deploy
+### Chat
 
-> **Note:** The BullMQ worker (`npm run worker`) is a long-running Node process and cannot run on Vercel's serverless functions. For production image processing queues, run it on a separate server (Railway, Fly.io, a VPS, etc.) or replace BullMQ with a serverless-compatible queue.
+Type a message and press **Enter** (or **Shift+Enter** for a new line). Responses stream in real time and are saved to your conversation history automatically.
+
+### Image Generation
+
+```
+/generate a neon-lit cyberpunk city at night
+```
+
+Type `/generate` followed by your prompt, or use the **⊕ → Generate Image** button in the toolbar.
+
+### Voice Input
+
+Click the microphone icon, speak, and your audio is transcribed via Groq Whisper and inserted into the message box.
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE) © Damanpreet Singh
