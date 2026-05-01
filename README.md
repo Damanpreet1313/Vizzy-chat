@@ -255,9 +255,3 @@ After deploying, set up the Clerk webhook so user records sync to your database:
 2. URL: `https://your-domain.com/api/webhooks/clerk`
 3. Events: `user.created`, `user.updated`, `user.deleted`
 4. Copy the signing secret → set as `CLERK_WEBHOOK_SECRET`
-
----
-
-## License
-
-MIT
