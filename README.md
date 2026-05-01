@@ -2,7 +2,7 @@
 
 A full-stack AI chat application built with Next.js 16, featuring real-time streaming, voice input, image generation, and image editing — all in a polished dark/light UI.
 
-![Vizzy Chat](public/bot-avatar.png)
+![Vizzy Chat]
 
 ## Features
 
