@@ -2,8 +2,6 @@
 
 A full-stack AI chat application built with Next.js 16, featuring real-time streaming, voice input, image generation, and image editing — all in a polished dark/light UI.
 
-![Vizzy Chat]
-
 ## Features
 
 - **Streaming chat** — real-time responses via OpenRouter (supports GPT-4o, Claude, Gemini, etc.)
