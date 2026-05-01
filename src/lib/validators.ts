@@ -11,7 +11,7 @@ export const chatMessageSchema = z.object({
     )
     .min(1, "At least one message is required")
     .max(100, "Too many messages in context"),
-  conversationId: z.string().cuid().optional(),
+  conversationId: z.string().min(1).nullish().transform(v => v ?? undefined),
 });
 
 export const imageGenerateSchema = z.object({

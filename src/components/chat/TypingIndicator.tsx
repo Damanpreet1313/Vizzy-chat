@@ -1,33 +1,21 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-export const TypingIndicator = () => {
-  return (
-    <div className="flex w-full gap-3 flex-row animate-slideUpIn">
-      <Avatar className="h-8 w-8 mt-0.5 shrink-0 ring-2 ring-border">
-        <AvatarImage src="/bot-avatar.png" />
-        <AvatarFallback
-          className="text-white text-xs font-bold"
-          style={{ background: "linear-gradient(135deg,#34d399,#059669)" }}
-        >
-          AI
-        </AvatarFallback>
-      </Avatar>
-
-      <div
-        className="flex items-center gap-1.5 rounded-2xl rounded-tl-sm px-4 py-3 border border-border/60 shadow-sm bg-card"
-      >
-        {[0, 0.18, 0.36].map((delay, i) => (
-          <motion.span
-            key={i}
-            className="w-2 h-2 rounded-full bg-primary/70"
-            animate={{ y: [0, -5, 0], opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 0.65, repeat: Infinity, delay, ease: "easeInOut" }}
-          />
+export const TypingIndicator = () => (
+  <div className="flex gap-3.5 py-2.5">
+    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-[14px]"
+      style={{ background: "linear-gradient(135deg,#3b82f6,#8b5cf6)", boxShadow: "0 0 14px rgba(59,130,246,0.3)" }}>
+      ✦
+    </div>
+    <div className="flex-1 min-w-0">
+      <div className="mb-[5px] flex items-baseline gap-2">
+        <span className="text-[13px] font-semibold" style={{ color: "var(--text1)" }}>Vizzy</span>
+      </div>
+      <div className="flex items-center gap-1 py-1">
+        {[0, 0.2, 0.4].map((delay, i) => (
+          <span key={i} className="inline-block h-[7px] w-[7px] rounded-full"
+            style={{ background: "var(--accent-color)", animation: `typeDot 1.4s ease-in-out ${delay}s infinite` }} />
         ))}
       </div>
     </div>
-  );
-};
+  </div>
+);

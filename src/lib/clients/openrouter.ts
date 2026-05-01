@@ -23,7 +23,7 @@ export const openRouterChat = async (messages: any[]) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "openrouter/auto", 
+      model: "meta-llama/llama-3.2-3b-instruct:free",
       messages,
       stream: true,
     }),
